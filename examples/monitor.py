@@ -60,13 +60,14 @@ parser.add_argument('-c', '--csv', default=False,
                     help="create comma separated value output")
 parser.add_argument('--header', default=False, action='store_true',
                     help="include header in csv output")
+parser.add_argument('--outfile', type=argparse.FileType('a'))
 parser.add_argument('--pin', type=int, default=4)
 parser.add_argument('-s', '--sleep', default=60.0, type=float,
                     help="Time to sleep between samples")
 
 opts = parser.parse_args()
 
-outfile = sys.stdout
+outfile = opts.outfile
 
 if opts.csv:
 
