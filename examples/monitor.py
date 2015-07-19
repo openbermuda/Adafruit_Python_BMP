@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # Copyright (c) 2014 Adafruit Industries
-# Author: Tony DiCola
+# Author: John Gill
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,8 +28,11 @@ from __future__ import print_function
 import datetime
 import argparse
 import csv
+import time
+import sys
 
 import Adafruit_BMP.BMP085 as BMP085
+import Adafruit_DHT as DHT
 
 # Default constructor will pick a default I2C bus.
 #
@@ -40,7 +43,7 @@ import Adafruit_BMP.BMP085 as BMP085
 # For the Beaglebone Black the library will assume bus 1 by default, which is
 # exposed with SCL = P9_19 and SDA = P9_20.
 sensor = BMP085.BMP085()
-
+dht_sensor = DHT.DHT22
 # Optionally you can override the bus number:
 #sensor = BMP085.BMP085(busnum=2)
 
@@ -53,32 +56,41 @@ sensor = BMP085.BMP085()
 parser = argparse.ArgumentParser()
 
 parser.add_argument('-c', '--csv', default=False,
+                    action='store_true',
                     help="create comma separated value output")
-parser,add_argument('--header', default=True, type=bool,
+parser.add_argument('--header', default=False, action='store_true',
                     help="include header in csv output")
-parser,add_argument('--sleep', default=60.0, type=float,
+parser.add_argument('--pin', type=int, default=4)
+parser.add_argument('-s', '--sleep', default=60.0, type=float,
                     help="Time to sleep between samples")
 
 opts = parser.parse_args()
 
 outfile = sys.stdout
 
-if opts.csv and opts,header:
-    print("date, temp, pressure, altitude, sealevel_pressure",
-        file=outfile)
+if opts.csv:
+
+    if opts.header:
+        print("date,temp,pressure,altitude,sealevel_pressure,humidity,temp_dht",
+              file=outfile)
     writer = csv.writer(outfile)
 
 
 while True:
 
+    humidity, temperature = DHT.read_retry(dht_sensor, opts.pin)
+    
     if opts.csv:
         writer.writerow([
-            datetime.datetime,now(),
+            datetime.datetime.now(),
             sensor.read_temperature(),
             sensor.read_pressure(),
             sensor.read_altitude(),
             sensor.read_sealevel_pressure(),
-            ]
+            humidity, temperature
+            ])
+
+        outfile.flush()
     
     else:
         print('Datetime = {}'.format(datetime.datetime.now()))
@@ -86,3 +98,7 @@ while True:
         print('Pressure = {0:0.2f} Pa'.format(sensor.read_pressure()))
         print('Altitude = {0:0.2f} m'.format(sensor.read_altitude()))
         print('Sealevel Pressure = {0:0.2f} Pa'.format(sensor.read_sealevel_pressure()))
+        print()
+	print('Temp={0:0.1f}*C  Humidity={1:0.1f}%'.format(temperature, humidity))
+
+    time.sleep(opts.sleep)
